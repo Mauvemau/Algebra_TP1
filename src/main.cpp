@@ -24,6 +24,9 @@ const int maxIntersects = 6;
 Vector2 intersections[maxIntersects];
 int currectIntersection;
 
+// Formas
+int shapeCode[maxVectors];
+
 // -- Funciones --
 
 namespace Intersections {
@@ -40,9 +43,20 @@ namespace Intersections {
 }
 
 namespace Shapes {
+
     void CalculateTriangle();
+    // Devuelve si la forma es cuadrilateral.
+    bool IsQuadrilateral();
     // Devuelve si la forma es un triangulo.
     bool IsTriangle();
+    // Checkea si dos codigos son iguales.
+    bool VerifyShapeCode(int c1[], int c2[]);
+    // Reinicia el codigo de la forma.
+    void ResetShapeCode();
+    // Ordena los valores del codigo de la forma de mayor a menor.
+    void ArrangeShapeCode();
+    // Imprime el codigo de la forma en la pantalla.
+    void PrintShapeCode();
     // Se ocupa de averiguar que forma es y hacer los calculos necesarios.
     void Manage();
 }
@@ -90,6 +104,7 @@ int main() {
             currentVector = 0;
             par = true;
             currectIntersection = 0;
+            Shapes::ResetShapeCode();
             InitVectors();
             cout << "Vectores reiniciados..." << endl;
         }
@@ -167,6 +182,8 @@ namespace Intersections {
                 Vector2 intersect = LineLineIntersection(vectors[i].point1.x, vectors[i].point1.y, vectors[i].point2.x, vectors[i].point2.y, vectors[j].point1.x, vectors[j].point1.y, vectors[j].point2.x, vectors[j].point2.y);
                 if (!isnan(intersect.x) && !IsInvalid(vectors[i], intersect) && !IsInvalid(vectors[j], intersect) && !IsRepeated(intersect)) {
                     Add(intersect);
+                    shapeCode[i]++;
+                    shapeCode[j]++;
                     cout << "intersection found: (" << intersect.x << ";" << intersect.y << ")\n";
                 }
             }
@@ -176,6 +193,7 @@ namespace Intersections {
 }
 
 namespace Shapes {
+
     void CalculateTriangle() {
         float a = GetDistance(intersections[0], intersections[1]);
         cout << "a: " << a << "\n";
@@ -188,14 +206,61 @@ namespace Shapes {
         cout << "The area of the triangle is: " << area << "\n";
     }
 
+    bool IsQuadrilateral() {
+        int code[] = { 2, 2, 2, 2 };
+        return (VerifyShapeCode(shapeCode, code));
+    }
+
     bool IsTriangle() {
-        return (currectIntersection == 3);
+        int code1[] = { 2, 2, 2, 0 };
+        int code2[] = { 3, 2, 2, 1 };
+        return (VerifyShapeCode(shapeCode, code1) || VerifyShapeCode(shapeCode, code2));
+    }
+
+    bool VerifyShapeCode(int c1[], int c2[]) {
+        for (int i = 0; i < maxVectors; i++) {
+            if (c1[i] != c2[i])
+                return false;
+        }
+        return true;
+    }
+
+    void ResetShapeCode() {
+        for (int i = 0; i < maxVectors; i++) {
+            shapeCode[i] = 0;
+        }
+    }
+
+    void ArrangeShapeCode() {
+        int aux;
+        for (int i = 0; i < maxVectors; i++) {
+            for (int j = 0; j + 1 < maxVectors - i; j++) {
+                if (shapeCode[j] < shapeCode[j + 1]) {
+                    aux = shapeCode[j];
+                    shapeCode[j] = shapeCode[j + 1];
+                    shapeCode[j + 1] = aux;
+                }
+            }
+        }
+    }
+
+    void PrintShapeCode() {
+        cout << "Shape code: ";
+        for (int i = 0; i < maxVectors; i++) {
+            cout << shapeCode[i] << " ";
+        }
+        cout << "\n";
     }
 
     void Manage() {
+        ArrangeShapeCode();
+        PrintShapeCode();
         if (IsTriangle()) {
             cout << "The shape is a triangle!\n";
             CalculateTriangle();
+        }
+        if (IsQuadrilateral()) {
+            cout << "The shape is a quadrilateral!\n";
         }
     }
 }
