@@ -9,6 +9,11 @@ struct Line {
     Vector2 point2;
 };
 
+struct Intersection {
+    Vector2 pos; // La posicion de la interseccion.
+    int lines[2]; // Cuales lineas conforman esta interseccion.
+};
+
 // -- Variables --
 
 // Ventana
@@ -21,7 +26,7 @@ Line vectors[maxVectors];
 
 // Intersecciones
 const int maxIntersects = 6;
-Vector2 intersections[maxIntersects];
+Intersection intersections[maxIntersects];
 int currectIntersection;
 
 // Formas
@@ -31,7 +36,7 @@ int shapeCode[maxVectors];
 
 namespace Intersections {
     // Añade una interseccion al array.
-    void Add(Vector2 intersection);
+    void Add(Vector2 intersection, int l1, int l2);
     // Devuelve si la interseccion en cuestion ya se encuentra en el array.
     bool IsRepeated(Vector2 intersection);
     // Devuelve si la interseccion de una linea es invalida o si se encuentra fuera de rango.
@@ -43,20 +48,18 @@ namespace Intersections {
 }
 
 namespace Shapes {
-
+    // Encuentra las intersecciones que componen al triangulo.
+    void FindTriangle(int intersects[]);
+    // Calcula el area del traingulo.
     void CalculateTriangle();
     // Devuelve si la forma es cuadrilateral.
-    bool IsQuadrilateral();
+    bool IsQuadrilateral(int code[]);
     // Devuelve si la forma es un triangulo.
-    bool IsTriangle();
+    bool IsTriangle(int code[]);
     // Checkea si dos codigos son iguales.
-    bool VerifyShapeCode(int c1[], int c2[]);
+    bool CompareCodes(int c1[], int c2[]);
     // Reinicia el codigo de la forma.
     void ResetShapeCode();
-    // Ordena los valores del codigo de la forma de mayor a menor.
-    void ArrangeShapeCode();
-    // Imprime el codigo de la forma en la pantalla.
-    void PrintShapeCode();
     // Se ocupa de averiguar que forma es y hacer los calculos necesarios.
     void Manage();
 }
@@ -68,6 +71,18 @@ float GetDistance(Vector2 v1, Vector2 v2);
 Vector2 PointBetweenTwoVectors(Vector2 v1, Vector2 v2);
 
 void InitVectors();
+
+#pragma endregion
+
+#pragma region Tools
+// Devuelve si el valor se encuentra en el array.
+bool IsInArray(int arr[], int size, int value);
+// Copia un array viejo en uno nuevo.
+void CopyArray(int oldArr[], int newArr[], int size);
+// Ordena los valores del codigo de la forma de mayor a menor.
+void ArrangeArray(int arr[], int size);
+// Imprime el codigo de la forma en la pantalla.
+void PrintArray(int arr[], int size);
 
 #pragma endregion
 
@@ -123,7 +138,7 @@ int main() {
             }
         }
         for (int i = 0; i < currectIntersection; i++) {
-            DrawCircle(intersections[i].x, intersections[i].y, 5.0f, GREEN);
+            DrawCircle(intersections[i].pos.x, intersections[i].pos.y, 5.0f, GREEN);
         }
 
         EndDrawing();
@@ -136,15 +151,17 @@ int main() {
 
 namespace Intersections {
 
-    void Add(Vector2 intersection) {
-        intersections[currectIntersection] = intersection;
+    void Add(Vector2 intersection, int l1, int l2) {
+        intersections[currectIntersection].pos = intersection;
+        intersections[currectIntersection].lines[0] = l1;
+        intersections[currectIntersection].lines[1] = l2;
         currectIntersection++;
     }
 
     bool IsRepeated(Vector2 intersection) {
         if (currectIntersection > 0) {
             for (int i = 0; i < currectIntersection; i++) {
-                if (intersections[i].x == intersection.x && intersections[i].y == intersection.y) {
+                if (intersections[i].pos.x == intersection.x && intersections[i].pos.y == intersection.y) {
                     return true;
                 }
             }
@@ -181,43 +198,56 @@ namespace Intersections {
             for (int j = 0; j < maxVectors; j++) {
                 Vector2 intersect = LineLineIntersection(vectors[i].point1.x, vectors[i].point1.y, vectors[i].point2.x, vectors[i].point2.y, vectors[j].point1.x, vectors[j].point1.y, vectors[j].point2.x, vectors[j].point2.y);
                 if (!isnan(intersect.x) && !IsInvalid(vectors[i], intersect) && !IsInvalid(vectors[j], intersect) && !IsRepeated(intersect)) {
-                    Add(intersect);
+                    Add(intersect, i, j);
+
                     shapeCode[i]++;
                     shapeCode[j]++;
-                    cout << "intersection found: (" << intersect.x << ";" << intersect.y << ")\n";
+                    cout << "intersection found: (" << intersect.x << ";" << intersect.y << ") Lines: [" << i << " & " << j << "]\n";
                 }
             }
         }
     }
-
 }
 
 namespace Shapes {
 
+    void FindTriangle(int intersects[]) {
+        int cursor = 0;
+        for (int i = 0; i < currectIntersection; i++) {
+            if (shapeCode[intersections[i].lines[0]] > 1 && shapeCode[intersections[i].lines[1]] > 1) {
+                intersects[cursor] = i;
+                cursor++;
+            }
+        }
+    }
+
     void CalculateTriangle() {
-        float a = GetDistance(intersections[0], intersections[1]);
+        int intersects[3];
+        FindTriangle(intersects);
+
+        float a = GetDistance(intersections[intersects[0]].pos, intersections[intersects[1]].pos);
         cout << "a: " << a << "\n";
-        float b = GetDistance(intersections[1], intersections[2]);
+        float b = GetDistance(intersections[intersects[1]].pos, intersections[intersects[2]].pos);
         cout << "b: " << b << "\n";
-        float c = GetDistance(intersections[2], intersections[0]);
+        float c = GetDistance(intersections[intersects[2]].pos, intersections[intersects[0]].pos);
         cout << "c: " << c << "\n";
         float s = ((a + b + c) / 2);
         float area = sqrt(s * ((s - a) * (s - b) * (s - c)));
         cout << "The area of the triangle is: " << area << "\n";
     }
 
-    bool IsQuadrilateral() {
-        int code[] = { 2, 2, 2, 2 };
-        return (VerifyShapeCode(shapeCode, code));
+    bool IsQuadrilateral(int code[]) {
+        int code1[] = { 2, 2, 2, 2 };
+        return (CompareCodes(code, code1));
     }
 
-    bool IsTriangle() {
+    bool IsTriangle(int code[]) {
         int code1[] = { 2, 2, 2, 0 };
         int code2[] = { 3, 2, 2, 1 };
-        return (VerifyShapeCode(shapeCode, code1) || VerifyShapeCode(shapeCode, code2));
+        return (CompareCodes(code, code1) || CompareCodes(code, code2));
     }
 
-    bool VerifyShapeCode(int c1[], int c2[]) {
+    bool CompareCodes(int c1[], int c2[]) {
         for (int i = 0; i < maxVectors; i++) {
             if (c1[i] != c2[i])
                 return false;
@@ -231,35 +261,19 @@ namespace Shapes {
         }
     }
 
-    void ArrangeShapeCode() {
-        int aux;
-        for (int i = 0; i < maxVectors; i++) {
-            for (int j = 0; j + 1 < maxVectors - i; j++) {
-                if (shapeCode[j] < shapeCode[j + 1]) {
-                    aux = shapeCode[j];
-                    shapeCode[j] = shapeCode[j + 1];
-                    shapeCode[j + 1] = aux;
-                }
-            }
-        }
-    }
-
-    void PrintShapeCode() {
-        cout << "Shape code: ";
-        for (int i = 0; i < maxVectors; i++) {
-            cout << shapeCode[i] << " ";
-        }
-        cout << "\n";
-    }
-
     void Manage() {
-        ArrangeShapeCode();
-        PrintShapeCode();
-        if (IsTriangle()) {
+        int arrangedCode[maxVectors];
+        CopyArray(shapeCode, arrangedCode, maxVectors);
+        ArrangeArray(arrangedCode, maxVectors);
+        cout << "Shape code: ";
+        PrintArray(arrangedCode, maxVectors);
+        cout << "\n";
+        
+        if (IsTriangle(arrangedCode)) {
             cout << "The shape is a triangle!\n";
             CalculateTriangle();
         }
-        if (IsQuadrilateral()) {
+        if (IsQuadrilateral(arrangedCode)) {
             cout << "The shape is a quadrilateral!\n";
         }
     }
@@ -287,6 +301,43 @@ void InitVectors() {
     for (int i = 0; i < maxVectors; i++) {
         vectors[i].point1 = { 0, 0 };
         vectors[i].point2 = { 0, 0 };
+    }
+}
+
+#pragma endregion
+
+#pragma region Tools
+bool IsInArray(int arr[], int size, int value) {
+    for (int i = 0; i < size; i++) {
+        if (arr[i] == value) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void ArrangeArray(int arr[], int size) {
+    int aux;
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j + 1 < size - i; j++) {
+            if (arr[j] < arr[j + 1]) {
+                aux = arr[j];
+                arr[j] = arr[j + 1];
+                arr[j + 1] = aux;
+            }
+        }
+    }
+}
+
+void CopyArray(int oldArr[], int newArr[], int size) {
+    for (int i = 0; i < size; i++) {
+        newArr[i] = oldArr[i];
+    }
+}
+
+void PrintArray(int arr[], int size) {
+    for (int i = 0; i < size; i++) {
+        cout << arr[i] << " ";
     }
 }
 
