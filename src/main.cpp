@@ -39,6 +39,10 @@ int shapeCode[maxVectors];
 // Pi
 const float m_pi = 3.14159265358979323846;
 
+// Display
+const char* shapeName;
+float shapeArea = 0;
+
 // -- Funciones --
 
 // Paso 4; Calculo de la forma.
@@ -241,12 +245,14 @@ namespace Shapes {
         // Los angulos siempre se van a calular de su lado concavo. Si la suma de todos los angulos da 360 aprox, el cuadrilatero no es concavo.
         if ((mainAng + parent1Ang + parent2Ang + oppositeAng) > 358) {
             cout << "It's a Convex Quadrilateral.\n";
+            shapeName = "Convex Quadrilateral";
             intersects[0] = main;
             intersects[1] = opposite;
         }
         else {
             // En caso de ser concavo, la suma de opuestos que sea mas alta define por donde cortar el cuadrilatero.
             cout << "It's a Concave Quadrilateral.\n";
+            shapeName = "Concave Quadrilateral";
             if (mainAng + oppositeAng > parent1Ang + parent2Ang) {
                 cout << "Slicing triangles from main to opposite.\n";
                 intersects[0] = main;
@@ -288,6 +294,7 @@ namespace Shapes {
             "\nd: " << c << "\n";
 
         cout << "The area of the quadrilateral is: " << (triangleA + triangleB) << ".\n";
+        shapeArea = (triangleA + triangleB);
     }
 
     void FindTriangle(int intersects[]) {
@@ -313,6 +320,8 @@ namespace Shapes {
         float s = ((a + b + c) / 2);
         float area = sqrt(s * ((s - a) * (s - b) * (s - c)));
         cout << "The area of the triangle is: " << area << "\n";
+        shapeName = "Triangle";
+        shapeArea = area;
     }
 
     bool IsQuadrilateral(int code[]) {
@@ -379,6 +388,7 @@ namespace Program {
             }
         }
         if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+            shapeArea = 0;
             currentVector = 0;
             par = true;
             currectIntersection = 0;
@@ -408,6 +418,14 @@ namespace Program {
             DrawCircle(intersections[i].pos.x, intersections[i].pos.y, 5.0f, BLUE);
             DrawCenteredText(TextFormat("%i", i), intersections[i].pos, 10.0f, WHITE);
         }
+
+        if (shapeArea > 0) {
+            DrawText(shapeName, GetScreenWidth() * .02, GetScreenHeight() * .05, GetScreenHeight() * .08, ORANGE);
+            DrawText(TextFormat("Area: %f", shapeArea), GetScreenWidth() * .02, GetScreenHeight() * .15, GetScreenHeight() * .04, RAYWHITE);
+        }
+
+        DrawText("[Left Click] anywhere in the screen to create vectors.", GetScreenWidth() * .02, GetScreenHeight() * .88, GetScreenHeight() * .04, RAYWHITE);
+        DrawText("[Right Click] to erase the vectors.", GetScreenWidth() * .02, GetScreenHeight() * .94, GetScreenHeight() * .04, RAYWHITE);
 
         EndDrawing();
     }
