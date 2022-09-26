@@ -32,6 +32,9 @@ int currectIntersection;
 // Formas
 int shapeCode[maxVectors];
 
+// Pi
+const float m_pi = 3.14159265358979323846;
+
 // -- Funciones --
 
 namespace Intersections {
@@ -48,6 +51,12 @@ namespace Intersections {
 }
 
 namespace Shapes {
+    // Hace lo mismo que CalculateTriangle, pero devuelve el valor.
+    float CalculateTriangleArea(float a, float b, float c);
+    // Identifica si el cuadrilatero es convexo o concavo, define por donde cortarlo en 2 triangulos.
+    void FindQuadrilateral(int intersects[]);
+    // Calcula el area de un cuadrilatero.
+    void CalculateQuadrilateral();
     // Encuentra las intersecciones que componen al triangulo.
     void FindTriangle(int intersects[]);
     // Calcula el area del traingulo.
@@ -65,16 +74,18 @@ namespace Shapes {
 }
 
 #pragma region Vectors
+float GetAngle(Vector2 v1, Vector2 v2, Vector2 c);
 // Devuelve la distancia entre 2 vectores.
 float GetDistance(Vector2 v1, Vector2 v2);
-// Devuelve el punto intermedio entre 2 vectores.
-Vector2 PointBetweenTwoVectors(Vector2 v1, Vector2 v2);
-
 void InitVectors();
 
 #pragma endregion
 
 #pragma region Tools
+float DegreesToRadians(float deg);
+float RadiansToDegrees(float rad);
+// Dibuja texto centrado.
+void DrawCenteredText(const char* text, Vector2 pos, int fontSize, Color color);
 // Devuelve si el valor se encuentra en el array.
 bool IsInArray(int arr[], int size, int value);
 // Copia un array viejo en uno nuevo.
@@ -138,7 +149,8 @@ int main() {
             }
         }
         for (int i = 0; i < currectIntersection; i++) {
-            DrawCircle(intersections[i].pos.x, intersections[i].pos.y, 5.0f, GREEN);
+            DrawCircle(intersections[i].pos.x, intersections[i].pos.y, 5.0f, BLUE);
+            DrawCenteredText(TextFormat("%i", i), intersections[i].pos, 10.0f, WHITE);
         }
 
         EndDrawing();
@@ -211,6 +223,100 @@ namespace Intersections {
 
 namespace Shapes {
 
+    float CalculateTriangleArea(float a, float b, float c) {
+        float s = ((a + b + c) / 2);
+        return sqrt(s * ((s - a) * (s - b) * (s - c)));
+    }
+
+    void FindQuadrilateral(int intersects[]) {
+        /*
+        Esto podria estar harcodeado, ya que si el main es 0, no importa como el usuario haga el cuadrilatero,
+        sus parientes siempre van a ser 1 y 2, y su opuesto 3.
+        Pero igualmente me rompí el coco haciendo este algoritmo, por que no?
+        */
+        int main = 0; // Agarramos una insterseccion cualquiera, en este caso la 0.
+        int parents[2] = { 0, 0 }; // Esa interseccion va a tener si o si 2 intersecciones parientes.
+        int currentParent = 0;
+        // Buscamos quienes son esos parientes y los asignamos a parents.
+        for (int i = 1; i < currectIntersection; i++) {
+            if (intersections[i].lines[0] == intersections[main].lines[0] ||
+                intersections[i].lines[0] == intersections[main].lines[1] ||
+                intersections[i].lines[1] == intersections[main].lines[0] ||
+                intersections[i].lines[1] == intersections[main].lines[1]) {
+                parents[currentParent] = i;
+                currentParent++;
+            }
+        }
+        int opposite = 0; // Ya que hay un main y 2 parientes, tambien tiene que haber un opuesto.
+        for (int i = 0; i < currectIntersection; i++) {
+            if (i != main && i != parents[0] && i != parents[1])
+                opposite = i;
+        }
+        cout << "Main Intersect: " << main <<
+            "\nParent A: " << parents[0] <<
+            "\nParent B: " << parents[1] <<
+            "\nOpposite: " << opposite << "\n";
+        // Ahora que ya sabemos el main, sus parientes y el opuesto, calculamos los 4 angulos que componen al cuadrilatero.
+        float mainAng = RadiansToDegrees(GetAngle(intersections[parents[0]].pos, intersections[parents[1]].pos, intersections[main].pos));
+        float parent1Ang = RadiansToDegrees(GetAngle(intersections[opposite].pos, intersections[main].pos, intersections[parents[0]].pos));
+        float parent2Ang = RadiansToDegrees(GetAngle(intersections[opposite].pos, intersections[main].pos, intersections[parents[1]].pos));
+        float oppositeAng = RadiansToDegrees(GetAngle(intersections[parents[0]].pos, intersections[parents[1]].pos, intersections[opposite].pos));
+        cout << "Main Angle: " << mainAng <<
+            "\nParent A Angle: " << parent1Ang <<
+            "\nParent B Angle: " << parent2Ang <<
+            "\nOpposite Angle: " << oppositeAng << "\n";
+        // Los angulos siempre se van a calular de su lado concavo. Si la suma de todos los angulos da 360 aprox, el cuadrilatero no es concavo.
+        if ((mainAng + parent1Ang + parent2Ang + oppositeAng) > 358) {
+            cout << "It's a Convex Quadrilateral.\n";
+            intersects[0] = main;
+            intersects[1] = opposite;
+        }
+        else {
+            // En caso de ser concavo, la suma de opuestos que sea mas alta define por donde cortar el cuadrilatero.
+            cout << "It's a Concave Quadrilateral.\n";
+            if (mainAng + oppositeAng > parent1Ang + parent2Ang) {
+                cout << "Slicing triangles from main to opposite.\n";
+                intersects[0] = main;
+                intersects[1] = opposite;
+            }
+            else {
+                cout << "Slicing triangles from parent A to parent B.\n";
+                intersects[0] = parents[0];
+                intersects[1] = parents[1];
+            }
+        }
+    }
+
+    void CalculateQuadrilateral() {
+        // Para calcular el area del cuadrilatero, lo vamos a dividir en 2 triangulos.
+        int mainIntersects[2]; // Para saber por donde cortarlo, primero necesitamos elegir intersecciones opuestas, estas se van a llamar main.
+        int parentIntersects[2] = {0, 0}; // Las otras dos intersecciones se van a llamar parents.
+        int parentCount = 0;
+        FindQuadrilateral(mainIntersects); // Antes de cortar el cuadrilatero en 2 triangulos, necesitamos saber si es concavo o convexo y setear main acordemente.
+        for (int i = 0; i < currectIntersection; i++) {
+            if (i != mainIntersects[0] && i != mainIntersects[1]) {
+                parentIntersects[parentCount] = i;
+                parentCount++;
+            }
+        }
+        // Hipotenusa, la comparten ambos triangulos.
+        float a = GetDistance(intersections[mainIntersects[0]].pos, intersections[mainIntersects[1]].pos);
+
+        float b = GetDistance(intersections[mainIntersects[0]].pos, intersections[parentIntersects[0]].pos);
+        float c = GetDistance(intersections[mainIntersects[1]].pos, intersections[parentIntersects[0]].pos);
+        float triangleA = CalculateTriangleArea(a, b, c);
+        cout << "a: " << b <<
+            "\nb: " << c << "\n";
+
+        b = GetDistance(intersections[mainIntersects[0]].pos, intersections[parentIntersects[1]].pos);
+        c = GetDistance(intersections[mainIntersects[1]].pos, intersections[parentIntersects[1]].pos);
+        float triangleB = CalculateTriangleArea(a, b, c);
+        cout << "c: " << b <<
+            "\nd: " << c << "\n";
+
+        cout << "The area of the quadrilateral is: " << (triangleA + triangleB) << ".\n";
+    }
+
     void FindTriangle(int intersects[]) {
         int cursor = 0;
         for (int i = 0; i < currectIntersection; i++) {
@@ -275,26 +381,24 @@ namespace Shapes {
         }
         if (IsQuadrilateral(arrangedCode)) {
             cout << "The shape is a quadrilateral!\n";
+            CalculateQuadrilateral();
         }
     }
 }
 
 #pragma region Vectors
+float GetAngle(Vector2 v1, Vector2 v2, Vector2 center) {
+    float a = powf(center.x - v1.x, 2) + powf(center.y - v1.y, 2);
+    float b = powf(center.x - v2.x, 2) + powf(center.y - v2.y, 2);
+    float c = powf(v2.x - v1.x, 2) + powf(v2.y - v1.y, 2);
+    return acosf((a + b - c) / sqrtf(4 * a * b));
+}
 
 float GetDistance(Vector2 v1, Vector2 v2)
 {
     float distX = v1.x - v2.x;
     float distY = v1.y - v2.y;
     return sqrt((distX * distX) + (distY * distY));
-}
-
-Vector2 PointBetweenTwoVectors(Vector2 v1, Vector2 v2) {
-    Vector2 point;
-
-    point.x = (v1.x + v2.x) / 2;
-    point.y = (v1.y + v2.y) / 2;
-
-    return point;
 }
 
 void InitVectors() {
@@ -307,6 +411,19 @@ void InitVectors() {
 #pragma endregion
 
 #pragma region Tools
+float DegreesToRadians(float deg) {
+    return (deg * (m_pi / 180.0));
+}
+
+float RadiansToDegrees(float rad) {
+    return (rad * (180.0 / m_pi));
+}
+
+void DrawCenteredText(const char* text, Vector2 pos, int fontSize, Color color) {
+    int textWide = MeasureText(text, fontSize);
+    DrawText(text, (pos.x) - (textWide * .5), (pos.y) - (fontSize * .5), fontSize, color);
+}
+
 bool IsInArray(int arr[], int size, int value) {
     for (int i = 0; i < size; i++) {
         if (arr[i] == value) {
