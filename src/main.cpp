@@ -201,6 +201,10 @@ namespace Intersections {
 namespace Shapes {
 
     float CalculateTriangleArea(float a, float b, float c) {
+        /*
+        Resuelto con la formula de Heron
+        https://en.wikipedia.org/wiki/Heron%27s_formula
+        */
         float s = ((a + b + c) / 2);
         return sqrt(s * ((s - a) * (s - b) * (s - c)));
     }
@@ -451,6 +455,10 @@ namespace Program {
 
 #pragma region Vectors
 float GetAngle(Vector2 v1, Vector2 v2, Vector2 center) {
+    /*
+    Encontre esta formula aca.
+    http://phrogz.net/angle-between-three-points
+    */
     float a = powf(center.x - v1.x, 2) + powf(center.y - v1.y, 2);
     float b = powf(center.x - v2.x, 2) + powf(center.y - v2.y, 2);
     float c = powf(v2.x - v1.x, 2) + powf(v2.y - v1.y, 2);
@@ -459,6 +467,10 @@ float GetAngle(Vector2 v1, Vector2 v2, Vector2 center) {
 
 float GetDistance(Vector2 v1, Vector2 v2)
 {
+    /*
+    Teorema de pitagoras
+    https://en.wikipedia.org/wiki/Euclidean_distance
+    */
     float distX = v1.x - v2.x;
     float distY = v1.y - v2.y;
     return sqrt((distX * distX) + (distY * distY));
