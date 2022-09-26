@@ -24,6 +24,10 @@ const int screenHeight = 450;
 const int maxVectors = 4;
 Line vectors[maxVectors];
 
+int currentVector;
+// Si es par, para el imput;
+bool par;
+
 // Intersecciones
 const int maxIntersects = 6;
 Intersection intersections[maxIntersects];
@@ -37,18 +41,8 @@ const float m_pi = 3.14159265358979323846;
 
 // -- Funciones --
 
-namespace Intersections {
-    // Añade una interseccion al array.
-    void Add(Vector2 intersection, int l1, int l2);
-    // Devuelve si la interseccion en cuestion ya se encuentra en el array.
-    bool IsRepeated(Vector2 intersection);
-    // Devuelve si la interseccion de una linea es invalida o si se encuentra fuera de rango.
-    bool IsInvalid(Line l, Vector2 intersection);
-    // Pasandole los datos de 2 lineas, encuentra la interseccion entre estas.
-    Vector2 LineLineIntersection(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4);
-    // Encuentra todas las posibles intersecciones, añade las que son validas.
-    void FindIntersections();
-}
+// Paso 4; Calculo de la forma.
+// Paso 3; Identificacion de forma.
 
 namespace Shapes {
     // Hace lo mismo que CalculateTriangle, pero devuelve el valor.
@@ -73,7 +67,35 @@ namespace Shapes {
     void Manage();
 }
 
+// Paso 2; busqueda de intersecciones.
+
+namespace Intersections {
+    // Añade una interseccion al array.
+    void Add(Vector2 intersection, int l1, int l2);
+    // Devuelve si la interseccion en cuestion ya se encuentra en el array.
+    bool IsRepeated(Vector2 intersection);
+    // Devuelve si la interseccion de una linea es invalida o si se encuentra fuera de rango.
+    bool IsInvalid(Line l, Vector2 intersection);
+    // Pasandole los datos de 2 lineas, encuentra la interseccion entre estas.
+    Vector2 LineLineIntersection(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4);
+    // Encuentra todas las posibles intersecciones, añade las que son validas.
+    void FindIntersections();
+}
+
+// Paso 1; Programa base y Input del usuario.
+
+namespace Program {
+    void ManageInput();
+    void Close();
+    void Draw();
+    void Update();
+    void Init();
+}
+
+// Funciones Utiles
+
 #pragma region Vectors
+// Recibe 2 vectores, y un vector centro, devuelve el angulo entre los 3 puntos.
 float GetAngle(Vector2 v1, Vector2 v2, Vector2 c);
 // Devuelve la distancia entre 2 vectores.
 float GetDistance(Vector2 v1, Vector2 v2);
@@ -82,7 +104,9 @@ void InitVectors();
 #pragma endregion
 
 #pragma region Tools
+// Cambia el valor de grados a radianes.
 float DegreesToRadians(float deg);
+// Cambia el valor de radianes a grados.
 float RadiansToDegrees(float rad);
 // Dibuja texto centrado.
 void DrawCenteredText(const char* text, Vector2 pos, int fontSize, Color color);
@@ -97,66 +121,15 @@ void PrintArray(int arr[], int size);
 
 #pragma endregion
 
+// -------------------------------------------
+// Source
+
 int main() {
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(screenWidth, screenHeight, "Algebra");
-    SetTargetFPS(30);
+    Program::Init();
 
-    int currentVector = 0;
-    bool par = true;
-    currectIntersection = 0;
-    InitVectors();
+    Program::Update();
 
-    while (!WindowShouldClose()) {
-        // Input
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && currentVector < maxVectors) {
-            if (par) {
-                vectors[currentVector].point1 = GetMousePosition();
-                cout << "[" << currentVector + 1 << "] Punto 1: (" << vectors[currentVector].point1.x << ";" << vectors[currentVector].point1.y << ")" << endl;
-                par = !par;
-            }
-            else {
-                vectors[currentVector].point2 = GetMousePosition();
-                cout << "[" << currentVector + 1 << "] Punto 2: (" << vectors[currentVector].point2.x << ";" << vectors[currentVector].point2.y << ")" << endl;
-                par = !par;
-                currentVector++;
-            }
-            if (currentVector == maxVectors) {
-                Intersections::FindIntersections();
-                Shapes::Manage();
-            }
-        }
-        if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
-            currentVector = 0;
-            par = true;
-            currectIntersection = 0;
-            Shapes::ResetShapeCode();
-            InitVectors();
-            cout << "Vectores reiniciados..." << endl;
-        }
-        // Update
-
-        // Draw
-        BeginDrawing();
-        ClearBackground(BLACK);
-
-        for (int i = 0; i < maxVectors; i++) {
-            if (i < currentVector) {
-                DrawLine(vectors[i].point1.x, vectors[i].point1.y, vectors[i].point2.x, vectors[i].point2.y, RED);
-            }
-            if (!par && currentVector < maxVectors) {
-                DrawLine(vectors[currentVector].point1.x, vectors[currentVector].point1.y, GetMousePosition().x, GetMousePosition().y, RED);
-            }
-        }
-        for (int i = 0; i < currectIntersection; i++) {
-            DrawCircle(intersections[i].pos.x, intersections[i].pos.y, 5.0f, BLUE);
-            DrawCenteredText(TextFormat("%i", i), intersections[i].pos, 10.0f, WHITE);
-        }
-
-        EndDrawing();
-    }
-
-    CloseWindow();
+    Program::Close();
 
     return 0;
 }
@@ -383,6 +356,78 @@ namespace Shapes {
             cout << "The shape is a quadrilateral!\n";
             CalculateQuadrilateral();
         }
+    }
+}
+
+namespace Program {
+    void ManageInput() {
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && currentVector < maxVectors) {
+            if (par) {
+                vectors[currentVector].point1 = GetMousePosition();
+                cout << "[" << currentVector + 1 << "] Punto 1: (" << vectors[currentVector].point1.x << ";" << vectors[currentVector].point1.y << ")" << endl;
+                par = !par;
+            }
+            else {
+                vectors[currentVector].point2 = GetMousePosition();
+                cout << "[" << currentVector + 1 << "] Punto 2: (" << vectors[currentVector].point2.x << ";" << vectors[currentVector].point2.y << ")" << endl;
+                par = !par;
+                currentVector++;
+            }
+            if (currentVector == maxVectors) {
+                Intersections::FindIntersections();
+                Shapes::Manage();
+            }
+        }
+        if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+            currentVector = 0;
+            par = true;
+            currectIntersection = 0;
+            Shapes::ResetShapeCode();
+            InitVectors();
+            cout << "Vectores reiniciados..." << endl;
+        }
+    }
+
+    void Close() {
+        CloseWindow();
+    }
+
+    void Draw() {
+        BeginDrawing();
+        ClearBackground(BLACK);
+
+        for (int i = 0; i < maxVectors; i++) {
+            if (i < currentVector) {
+                DrawLine(vectors[i].point1.x, vectors[i].point1.y, vectors[i].point2.x, vectors[i].point2.y, RED);
+            }
+            if (!par && currentVector < maxVectors) {
+                DrawLine(vectors[currentVector].point1.x, vectors[currentVector].point1.y, GetMousePosition().x, GetMousePosition().y, RED);
+            }
+        }
+        for (int i = 0; i < currectIntersection; i++) {
+            DrawCircle(intersections[i].pos.x, intersections[i].pos.y, 5.0f, BLUE);
+            DrawCenteredText(TextFormat("%i", i), intersections[i].pos, 10.0f, WHITE);
+        }
+
+        EndDrawing();
+    }
+
+    void Update() {
+        while (!WindowShouldClose()) {
+            ManageInput();
+            Draw();
+        }
+    }
+
+    void Init() {
+        SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+        InitWindow(screenWidth, screenHeight, "Algebra");
+        SetTargetFPS(30);
+
+        currentVector = 0;
+        par = true;
+        currectIntersection = 0;
+        InitVectors();
     }
 }
 
