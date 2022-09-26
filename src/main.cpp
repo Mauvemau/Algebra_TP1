@@ -2,6 +2,10 @@
 #include <iostream>
 #include "raylib.h"
 
+/*
+[!] COMPILAR PARA 32 BITS!
+*/
+
 using namespace std;
 
 struct Line {
